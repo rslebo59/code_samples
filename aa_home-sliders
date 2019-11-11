@@ -1,0 +1,115 @@
+/*
+ * This custom jQuery plugin was used to create a custom homepage hero slider
+ * to add custom styles. Prior to this I would use slick slider to generate
+ * custom sliders. Based on the design, slick slider was not capable for this
+ * design. Instead, I developed my own, custom slider that continuously rotates on a timer.
+ *
+ * https://www.advancingalternatives.com/
+ */
+
+
+//the semi-colon before function invocation is a safety net against concatenated
+//scripts and/or other plugins which may not be closed properly.
+;(function( $, window, document, undefined ) {
+
+	"use strict";
+
+		var pluginName = 'homeSlider',
+			defaults = {
+				timer: 7000,
+			};
+
+		function Plugin( element, options, id )
+		{
+			this.id = id;
+			this.element = element;
+			this.settings = $.extend( {}, defaults, options );
+			this._defaults = defaults;
+			this._name = pluginName;
+
+			this.init();
+		}
+
+		$.extend( Plugin.prototype, {
+
+			init: function()
+			{
+				var _ = this;
+
+				var flag = true;
+				var int;
+
+				if ($('.homepage-slide').length > 1) {
+
+					$('.slider-navigation').on('click', '.slider-dot', function(){
+						flag = false;
+						clearInterval(int);
+						
+						flag = _.dotClick($(this), flag);
+
+						if (flag) {
+							int = setInterval(function(){ 
+								_.activeSlider();
+							}, _.settings.timer);
+						}
+
+					});
+
+					if (flag) {
+						int = setInterval(function(){ 
+							_.activeSlider();
+						}, _.settings.timer);
+					}
+				}
+			},
+
+			activeSlider: function()
+			{	
+				var _ = this;
+
+				var next = $('.homepage-slide.active-slide').removeClass('active-slide').next('.homepage-slide');
+
+				if (! next.length) next = next.prevObject.siblings(':first');
+
+				next.addClass('active-slide');
+
+				var id = $('.active-slide').attr('data-gallery-item');
+
+				var dots = $('.slider-navigation').find('.slider-dot[data-gallery-item="' + id + '"]');
+
+				$('.active-dot').removeClass('active-dot');
+				dots.addClass('active-dot');
+			},
+
+			dotClick: function(dot, flag)
+			{
+				var _ = this;
+
+				var id = dot.attr('data-gallery-item');
+				var item = $('.homepage-slider-container').find('.homepage-slide[data-gallery-item="' + id + '"]');
+
+				$('.active-dot').removeClass('active-dot');
+				$('.active-slide').removeClass('active-slide');
+
+				dot.addClass('active-dot');
+				item.addClass('active-slide');
+
+				flag = true;
+				
+				return flag;
+			}
+
+		} );
+
+		// A really lightweight plugin wrapper around the constructor,
+		// preventing against multiple instantiations
+		$.fn[ pluginName ] = function( options ) {
+		    return this.each( function() {
+		        if ( !$.data( this, "plugin_" + pluginName ) ) {
+		            $.data( this, "plugin_" +
+		                pluginName, new Plugin( this, options ) );
+		        }
+		    } );
+		};
+		
+})( jQuery, window, document );
