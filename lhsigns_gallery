@@ -1,0 +1,156 @@
+/*
+ * This custom jQuery function runs a load() function on the L&H Image Gallery/Videos 
+ * page. I decided to use a load function in place of ajax due to the issues
+ * I was running into pagination with ajax.
+ *
+ * https://www.lhsigns.com/image-gallery-videos.html
+ */
+
+(function($){
+	var running 	= false,
+		container 	= '.gallery-items-container',
+		spinner 	= 'div.spinner',
+		startURL,
+		startPage,
+		firstPage,
+		numPages;
+
+	if( !running ) {
+		startPage = $('span.current').children().html();
+		startURL = document.location.href;
+		firstPage = '<a class="page-numbers current" href="'+startURL+'/page/'+startPage+'"><span>'+startPage+'</span></a>';
+	}
+
+	$('span.current').replaceWith(firstPage);
+	$('a.page-numbers:not(.prev,.next)').addClass('page');
+	
+	numPages = $('.page.page-numbers').length;
+
+	console.log(numPages);
+
+	/*
+	 *
+	 * This section of code is for filtering the posts
+	 * based on the select field.
+	 *
+	 */
+	$('.filter-options-container').change(function(e){
+		e.preventDefault();
+
+		running = false;
+
+		$('div.spinner').addClass('active-spinner');
+		$(container).addClass('container-fade');
+
+		var FORM = $('.gallery-filters').serialize();
+		var towerWrap = '.template-gallery-container .tower-wrap';
+		var target_url = $(towerWrap).attr('data-url');
+
+		var cat_url = target_url + '/?' + FORM;
+
+		$(towerWrap).load(cat_url + ' ' + towerWrap + ' > *', function(){
+			$('.container-fade').removeClass('container-fade');
+			$(spinner).fadeOut('slow');
+
+			setTimeout(function(){
+				$(spinner).removeClass('active-spinner').css({
+					display: ''
+				});
+			}, 1000);
+
+			$('html, body').animate({
+		        scrollTop: $(container).offset().top - 200
+		    }, 500);
+
+		    if( !running ) {
+		    	startPage = $('span.current').children().html();
+		    	startURL = document.location.href;
+		    	firstPage = '<a class="page-numbers current" href="'+startURL+'/page/'+startPage+'"><span>'+startPage+'</span></a>';
+		    }
+
+		    $('span.current').replaceWith(firstPage);
+		    $('a.page-numbers:not(.prev,.next)').addClass('page');
+		    
+		    numPages = $('.page.page-numbers').length;
+		});
+	});
+
+
+	/*
+	 *
+	 * This section is to .load() in the paginated posts
+	 * once a page has been selected.
+	 *
+	 */
+	$(document).on('click', '.post-navigation .content .page-numbers', function(e){
+		e.preventDefault();
+
+		if( $(this).hasClass('prev') ){
+			$('.page.current').prev('.page.page-numbers').addClass('current-tribe');
+			$('.current').removeClass('current');
+			$('.current-tribe').removeClass('current-tribe').addClass('current');
+
+		} else if( $(this).hasClass('next') ) {
+			$('.page.current').next('.page.page-numbers').addClass('current-tribe');
+			$('.current').removeClass('current');
+			$('.current-tribe').removeClass('current-tribe').addClass('current');
+
+		} else {
+			$('.current').removeClass('current');
+			$(this).addClass('current');
+		}
+
+		var elementURL = $(this).attr('href');
+		var pagedURL = elementURL.substring(0, elementURL.lastIndexOf('/') + 1);
+		var pageNum = elementURL.substring(elementURL.lastIndexOf('/') + 1, elementURL.lastIndexOf('/') + 2);
+		var queryURL = elementURL.substring(elementURL.lastIndexOf('/') + 2, elementURL.length);
+		var URL = pagedURL + pageNum + queryURL;
+
+		var nextPage = pagedURL + (parseInt(pageNum) + 1).toString() + queryURL;
+		var prevPage = pagedURL + (parseInt(pageNum) - 1).toString() + queryURL;
+		
+		if( parseInt(pageNum) - 1 === 0 ) {
+			prevPage = pagedURL + 1;
+
+			$('a.page-numbers:first-child').addClass('current');
+		}
+
+		var previous = '<a class="prev page-numbers" href="'+prevPage+'">Previous</a>';
+
+		$('div.spinner').addClass('active-spinner');
+		$(container).addClass('container-fade');
+
+		$(container).load(URL + ' ' + container + ' > *', function(){
+			$('.container-fade').removeClass('container-fade');
+			$(spinner).fadeOut('slow');
+
+			setTimeout(function(){
+				$(spinner).removeClass('active-spinner').css({
+					display: ''
+				});
+			}, 1000);
+
+			$('html, body').animate({
+		        scrollTop: $(container).offset().top - 200
+		    }, 500);
+
+		    if(!running) {
+		    	$('.post-navigation .content').prepend(previous);
+		    	$('.next.page-numbers').css({display: ''});
+		    	running = true;
+
+		    } else if( running && pageNum == 1 ) {
+		    	$('.prev.page-numbers').remove();
+		    	$('.next.page-numbers').css({display: ''});
+		    	running = false;
+
+		    } else if( running && pageNum == numPages.toString() ) {
+		    	$('.next.page-numbers').css({display: 'none'});
+		    }
+
+	    	$('.page-numbers.next').attr('href', nextPage);	
+	    	$('.page-numbers.prev').attr('href', prevPage);	
+		});
+	});
+
+})(jQuery);
