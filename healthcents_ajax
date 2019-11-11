@@ -1,0 +1,91 @@
+<?php
+
+
+/*
+ * Used to get Redner's Markets Healthcents Issues.
+ *
+ * site: https://www.rednersmarkets.com/healthcents-issues.html
+ */
+class HealthcentsReload {
+
+	public static function get_new_issue( $post ) {
+
+		?>
+		<script type="text/javascript">
+			jQuery(function($){
+				var newIssue = <?php echo $post ?>;
+
+				$('input[name=new_post]').val(newIssue);
+
+				$('#healthcents-select').on('change', function() {
+					newIssue = this.value;
+
+					issueAjax( newIssue );
+				});
+
+				function issueAjax( newIssue ) {
+					var loaded = false;
+
+					if( loaded ) return;
+
+					var myData = $('#healthcents-select').val();
+
+					$.get(
+						'healthcents-issue-reload.php?new_post='+myData,
+						function(data){
+
+							var objData = jQuery.parseJSON(data);
+
+							$('.issue-url').attr('href', objData.url);
+							$('.healthcents-featured .issue-url').html(objData.healthcents_featured);
+							$('.healthcents-issue-link').attr('href', objData.url);
+							$('.issue-content').html(objData.content);
+
+							return data;
+						}
+					);
+
+					loaded = true;
+				}
+			});
+		</script>
+		<?php
+	}
+}
+
+
+/*
+ * This was my call to get the next selected Healthcents article.
+ *
+ * site: https://www.rednersmarkets.com/healthcents-issues.html
+ */
+<?php
+
+// $new_post = sanitize_url( $_POST['new_post'] );
+if( isset($_GET['new_post']) && !empty($_GET['new_post']) ) {
+
+	$new_post = $_GET['new_post'];
+
+	$content = get_field('hc_key_topics', $new_post);
+	$thumbnail = get_the_post_thumbnail( $new_post );
+	$url = get_field('pdf_upload', $new_post );
+	$default_image = wp_get_attachment_image( 80174, 'default-healthcents-issue', false, '' );
+
+	if( !$thumbnail ) {
+		$thumbnail = $default_image;
+	}
+
+	if( isset($new_post) && !empty($new_post) ) {
+
+		echo json_encode( array(
+			'post_id' => $new_post,
+			'healthcents_featured' => $thumbnail,
+			'url' => $url,
+			'content' => $content,
+		));
+
+		exit;
+	}
+
+	exit;
+}
