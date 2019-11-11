@@ -1,0 +1,127 @@
+/*
+ * This custom jQuery plugin is used on nimblist and several other client websites 
+ * that use a logo rotator. It assignes a specific class to the desired elements
+ * which then can be adjusted in the styles to provide the logos to rotate.
+ *
+ * https://nimblist.com/projects/ 
+ */
+
+// the semi-colon before function invocation is a safety net against concatenated
+// scripts and/or other plugins which may not be closed properly.
+;( function( $, window, document, undefined ) {
+
+    "use strict";
+
+        var pluginName = "towerRotateImg",
+            defaults = {
+                showFirst: 15,
+                targetClass: '.rotate-image',
+                timing: 500
+            };
+
+        function Plugin( element, options, id, e )
+        {
+            this.id = id;
+            this.element = element;
+            this.settings = $.extend( {}, defaults, options );
+            this._defaults = defaults;
+            this._name = pluginName;
+
+            this.init();
+        }
+
+        $.extend( Plugin.prototype, {
+
+            init: function()
+            {
+            	var _ = this;
+                _.checkPage();
+
+                _.getImageArray();
+
+            },
+
+            checkPage: function()
+            {
+                var _ = this;
+                if ( $('body').hasClass('page-template-template-about') ) {
+                    return true;
+                }
+            },
+
+            getImageArray: function()
+            {
+                var _ = this;
+                var htmlsrc = [];
+                $(_.settings.targetClass).each(function(){
+                    var src = $(this).html();
+                    htmlsrc.push(src);
+                });
+
+                var mobile_slice = _.settings.showFirst / 2;
+
+                if ($(window).width() < 700) {
+                    $(_.settings.targetClass).slice(mobile_slice).hide();
+                }
+
+                if ($(window).width() > 700) {
+                    $(_.settings.targetClass).slice(_.settings.showFirst).hide();
+                }
+
+
+                if ( _.checkPage() ) {
+                    window.setInterval(function(){
+                        _.setRotateElements(htmlsrc);
+                    }, 3000);
+                } else {
+                    window.setInterval(function(){
+                        _.setRotateElements(htmlsrc);
+                    }, _.settings.timing);
+                }
+            },
+
+            setRotateElements: function(htmlsrc)
+            {
+                var _ = this;
+
+                $.fn.random = function() {
+                  return this.eq(Math.floor(Math.random() * this.length));
+                }
+
+                var target = $('.rotate-image:visible').random();
+
+                var setImg = htmlsrc[Math.floor(Math.random()*htmlsrc.length)];
+
+                _.rotateAnimation(target, setImg);
+            },
+
+            rotateAnimation: function(target, setImg)
+            {
+                var _ = this;
+
+                $(target).children('img').css('opacity', 0);
+
+                setTimeout(function(){
+                    $(target).html(setImg);
+                    $(target).children('img').css('opacity', 1);
+                }, 300);
+
+            }
+
+
+        });
+
+        // A really lightweight plugin wrapper around the constructor,
+        // preventing against multiple instantiations
+        $.fn[ pluginName ] = function( options ) {
+            var id = 0;
+            return this.each( function() {
+                if ( !$.data( this, "plugin_" + pluginName ) ) {
+                    $.data( this, "plugin_" +
+                        pluginName, new Plugin( this, options, id ) );
+
+                    id++;
+                }
+            } );
+        };
+} )( jQuery, window, document );
