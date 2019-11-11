@@ -1,0 +1,168 @@
+<?php
+/**
+ * Command Center Rest Controller
+ * 
+ * Defines the custom Rest Routes for WordPress which can be used to 
+ * then send and recieve data through JavaScript.
+ * 
+ * @link        synapseresults.com
+ * @since       1.0.0
+ * 
+ * @package     CommandCenter
+ * @subpackage  CommandCenter/Public
+ * @author      Synapse
+ */
+class CommandCenterRestController
+{
+    public function __construct()
+    {
+        $this->namespace    = '/command-center/v1';
+        $this->dashboardConfig = '_command_center_dashboard_config';
+    }       
+    
+    /**
+     * Generate the plugins Custom Rest Routes
+     *
+     *@since 1.0.0
+     */
+    public function register_routes()
+    {
+      register_rest_route( $this->namespace, '/pages',
+          array(
+              'methods'   => 'GET',
+              'callback'  => array( $this, 'get_cc_pages' ),
+              'permissions_callback' => array( $this, 'get_permissions' ),
+          )
+      );
+    }
+
+    /**
+     * Function call to get all of the Command Center pages from the admin, except the Login
+     * and Dashboard pages for the Command Center. It then will be used to populate the
+     * "Add Card" modal select fields.
+     * 
+     * @since   1.0.0
+     */
+    public function get_cc_pages( $data )
+    {
+        if (is_multisite()):
+      $login_page = get_blog_option(get_current_blog_id(), 'login_page');
+      $dashboard_page = get_blog_option(get_current_blog_id(), 'dashboard');
+    else:
+      $login_page = get_option('login_page');
+      $dashboard_page = get_option('dashboard');
+        endif;
+
+    $args = array(
+      'posts_per_page' 	=> -1,
+      'post_type'		 	=> 'syn_cc-pages',
+      'order'			 	=> 'ASC',
+      'orderby'		 	=> 'menu_order',
+      'post_status'	 	=> 'publish',
+      'post__not_in'		=> array(
+        $login_page,
+        $dashboard_page
+            ),
+        );
+
+        $pages = new WP_Query( $args );
+        $posts = $pages->get_posts();
+
+        foreach( $posts as &$p ) {
+            $this->get_protected_post_data( $p );
+        }
+
+        return new WP_REST_Response( $posts, 200 );
+    }
+}
+
+/**
+ * Service call for RestAPI calls
+ */
+import 'promise-polyfill/src/polyfill';
+import 'whatwg-fetch';
+
+class WPService {
+    constructor(base, namespace) {
+        this.base = base;
+        this.namespace = namespace;
+        this.nonce = commandCenterSettings.nonce;
+    }
+
+    get(resource, params) {
+        var endpoint = this.base + '/wp-json/' + this.namespace + resource;
+
+        if (document.querySelector('.spinner')) {
+            document.querySelector('.spinner').parentNode.classList.add('is-visible');
+        }
+
+        return $.ajax({
+            method: "GET",
+            url: endpoint,
+            dataType: 'json',
+            beforeSend: function(xhr){
+                xhr.setRequestHeader( 'X-WP-Nonce', commandCenterSettings.nonce );
+            }
+        }).done(function(response){
+            // console.log(response);
+            if (document.querySelector('.spinner')) {
+                document.querySelector('.spinner').parentNode.classList.remove('is-visible');
+            }
+            return response;
+        }).fail(function(error){
+            console.error(error);
+        });
+    }
+
+    update(resource, params) {
+        var endpoint = this.base + '/wp-json/' + this.namespace + resource;
+        
+        if (document.querySelector('.spinner')) {
+            document.querySelector('.spinner').parentNode.classList.add('is-visible');
+        }
+
+        return $.ajax({
+            method: "POST",
+            url: endpoint,
+            data: JSON.stringify(params, undefined),
+            beforeSend: function(xhr){
+                xhr.setRequestHeader( 'X-WP-Nonce', commandCenterSettings.nonce );
+            }
+        }).done(function(response){
+            // console.log(response);
+            if (document.querySelector('.spinner')) {
+                document.querySelector('.spinner').parentNode.classList.remove('is-visible');
+            }
+            return response;
+        }).fail(function(error){
+            console.error(error);
+        });
+    }
+
+    post(resource, params) {
+        var endpoint = this.base + '/wp-json/' + this.namespace + resource;
+
+        if (document.querySelector('.spinner')) {
+            document.querySelector('.spinner').parentNode.classList.add('is-visible');
+        }
+
+        return $.ajax({
+            method: "POST",
+            url: endpoint,
+            data: JSON.stringify(params, undefined),
+            beforeSend: function(xhr){
+                xhr.setRequestHeader( 'X-WP-Nonce', commandCenterSettings.nonce );
+            }
+        }).done(function(response){
+            // console.log(response);
+            if (document.querySelector('.spinner')) {
+                document.querySelector('.spinner').parentNode.classList.remove('is-visible');
+            }
+            return response;
+        }).fail(function(error){
+            console.error(error);
+        });
+    }
+}
+
+export default WPService;
