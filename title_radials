@@ -1,0 +1,247 @@
+/*
+ * This custom jQuery plugin was used to generate the custom animated radials for the client.
+ * This plugin was also being used with D3 javascript library to generate the svg
+ * radials.
+ *
+ * https://www.advancingalternatives.com/light-deprivation-greenhouses/
+ */
+
+//the semi-colon before function invocation is a safety net against concatenated
+//scripts and/or other plugins which may not be closed properly.
+;(function( $, window, document, undefined ) {
+
+	"use strict";
+
+		var pluginName = 'titleRadials',
+			defaults = {
+			};
+
+		function Plugin( element, options, id )
+		{
+			this.id = id;
+			this.element = element;
+			this.settings = $.extend( {}, defaults, options );
+			this._defaults = defaults;
+			this._name = pluginName;
+
+			this.init();
+		}
+
+		$.extend( Plugin.prototype, {
+
+			init: function()
+			{
+				var _ = this;
+
+				_.radial();
+			},
+
+			radial: function()
+			{
+				var wrapper = $('.chart-item .chart-radial');
+				var start = 0;
+				var data = [];
+
+				wrapper.each(function(){
+					data.push( {
+						type: $(this).data('type'),
+						number: $(this).data('number'),
+						max: $(this).data('max')
+					});
+				});
+
+				var colors = {
+					fill: '#92C468',
+					track: '#FFFFFF',
+					text: '#000000',
+					stroke: '#FFFFFF',
+				}
+
+				var radius = 80;
+				var border = 16;
+				var strokeSpacing = 0;
+				var endPoint = Math.PI * 2;
+				var formatText = d3.format('.0');
+				var boxSize = radius * 2;
+				var count = data;
+				var progress = start;
+				var step = data < start ? -0.01 : 0.01;
+
+				var arc = d3.arc()
+					.innerRadius(radius)
+					.outerRadius(radius - border)
+					.startAngle(0)
+					.endAngle( function(d) { 
+						if (d.type == 'number') {
+							return (d.number / d.max) * Math.PI * 2;
+						} else {
+							return (d.number / 100) * Math.PI * 2; 
+						}
+					} );
+
+				var arcBG = d3.arc()
+					.innerRadius(radius)
+					.outerRadius(radius - border)
+					.startAngle(0)
+					.endAngle( function(d) { return Math.PI * 2; } );
+
+				var  txtBG = d3.arc()
+					.innerRadius(0)
+					.outerRadius(radius - border * 1.4)
+					.startAngle(0)
+					.endAngle( function(d) {
+						return Math.PI * 2;
+					} );
+
+				var svg = d3.selectAll('.chart-radial')
+					.append('svg').data(data)
+					.attr('class', 'pie')
+					.attr('width', boxSize)
+					.attr('height', boxSize);
+
+				var radial = svg.append('g')
+					.attr('class', 'radial-progress')
+					.attr('transform', 'translate(' + boxSize / 2 + ',' + boxSize / 2 + ')');
+
+				var textInput = svg.append('g')
+					.attr('class', 'radial-progress-text-container')
+					.attr('transform', 'translate(' + boxSize / 2 + ',' + boxSize / 2 + ')');
+
+				// Background
+				radial.append('path')
+					.datum( {endAngle: Math.PI * 2} )
+					.attr('class', 'radial_progress__background')
+					.attr('fill', colors.track)
+					.attr('stroke', colors.stroke)
+					.attr('stroke-width', strokeSpacing+'px')
+					.attr('d', arcBG);
+
+				// Foreground
+				radial.append('path')
+					.attr('class', 'arc radial-progress__foreground')
+					.attr('fill', colors.fill)
+					.attr('stroke', colors.stroke)
+					.attr('stroke-width', strokeSpacing+'px');
+
+				textInput.append('path')
+					.datum( {endAngle: Math.PI * 2} )
+					.attr('class', 'radial_text__background')
+					.attr('fill', colors.fill)
+					.attr('stroke', colors.stroke)
+					.attr('stroke-width', strokeSpacing+'px')
+					.attr('d', txtBG);
+
+				var tspan = textInput.append('text')
+					.attr('class', 'radial-progress__text')
+					// .attr('dy', '1rem')
+					.attr('text-anchor', 'middle')
+					.attr('fill', colors.text);
+
+				tspan.append('tspan')
+					.attr('dominant-baseline', 'middle')
+					.text(function(d, i) {
+						return 0;
+					});
+
+				var formatPercent = d3.format('.5s');
+
+				$(document).on('scroll', function(){
+					var elTop = $('.chart-radial-section').offset().top;
+					var winTop = $(window).scrollTop();
+
+					var winHeight = window.innerHeight;
+					var elTopToWinTop = elTop - winTop;
+					var elTopToWinBottom = winHeight - elTopToWinTop;
+					var distBottom = 150;
+
+					if( elTopToWinBottom > distBottom ) {
+						updateArc();
+					}
+				});
+
+				function updateArc() {
+
+					if( d3.selectAll('text.radial-progress__text tspan').text() === '0' ){
+
+						d3.selectAll('path.radial-progress__foreground')
+							.transition()
+							.duration(750)
+							.attrTween('d', tweenArc);
+
+						d3.selectAll('text.radial-progress__text tspan')
+							.transition()
+							.duration(750)
+							.tween('text', function(d) {
+								var that = this;
+								// console.log(d);
+
+								var i = d3.interpolateRound(0, d.number);
+
+								return function(t) {
+									var newCount;
+
+									if (d.type == 'percentage') {
+										newCount = i(t) + ' %';
+									} 
+									else if (d.type == 'monetary') {
+										var b 		= d.number;
+										var length  = b.toString().length;
+										var booker 	= parseInt(b)/ parseInt(length);
+
+										var ex = parseInt(b) / booker;
+										var exponent = ex - (ex % 3) ;
+
+										if(ex % 3 == 0){
+										   exponent -=3;
+										}
+
+										var scno = parseInt(b) / Math.pow(10,exponent);
+
+										var qualifer = "";
+
+										if( ex > 9)  {
+										    qualifer = "billion";
+										}
+										else if(ex > 6) {
+										    qualifer = "million";
+										}
+										else {
+										    qualifer = " thousand";     
+										}
+
+										newCount = '$ ' + (t * scno).toPrecision(2) + ' ' + qualifer;
+									} 
+									else {
+										newCount = i(t);
+									}
+
+									return d3.select(that).text(newCount);
+								};
+							});
+					}
+				}
+
+				function tweenArc(d) {
+					var i = d3.interpolate({number: 0}, d);
+					// console.log(d);
+					// console.log(i);
+
+					return function(t) {
+						return arc(i(t));
+					};
+				}
+			}
+		} );
+
+		// A really lightweight plugin wrapper around the constructor,
+		// preventing against multiple instantiations
+		$.fn[ pluginName ] = function( options ) {
+		    return this.each( function() {
+		        if ( !$.data( this, "plugin_" + pluginName ) ) {
+		            $.data( this, "plugin_" +
+		                pluginName, new Plugin( this, options ) );
+		        }
+		    } );
+		};
+		
+})( jQuery, window, document );
